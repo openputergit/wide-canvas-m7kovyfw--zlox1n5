@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AttendEase - Attendance Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        .login-bg {
+            background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%);
+        }
+        .qr-scanner {
+            position: relative;
+            width: 300px;
+            height: 300px;
+        }
+        .scanner-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #3B82F6;
+            animation: scan 2s linear infinite;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Login Component -->
+    <div id="loginComponent" class="min-h-screen flex items-center justify-center login-bg p-4">
+        <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+            <h2 class="text-2xl font-bold text-center mb-6">AttendEase</h2>
+            <div class="space-y-4">
+                <input type="email" id="email" placeholder="Email" class="w-full p-3 border rounded-lg">
+                <input type="password" id="password" placeholder="Password" class="w-full p-3 border rounded-lg">
+                <button onclick="login()" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">Login</button>
+                <button onclick="googleSignIn()" class="w-full border border-gray-300 p-3 rounded-lg flex items-center justify-center gap-2">
+                    <i class="bi bi-google"></i> Sign in with Google
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboardComponent" class="hidden">
+        <!-- Sidebar -->
+        <div class="fixed left-0 top-0 h-full w-64 bg-white shadow-lg">
+            <div class="p-4">
+                <h2 class="text-xl font-bold">AttendEase</h2>
+                <div class="mt-8 space-y-2">
+                    <button onclick="showSection('dashboard')" class="w-full p-3 text-left hover:bg-blue-50 rounded-lg">
+                        <i class="bi bi-grid-1x2-fill mr-2"></i> Dashboard
+                    </button>
+                    <button onclick="showSection('attendance')" class="w-full p-3 text-left hover:bg-blue-50 rounded-lg">
+                        <i class="bi bi-calendar-check mr-2"></i> Mark Attendance
+                    </button>
+                    <button onclick="showSection('leaves')" class="w-full p-3 text-left hover:bg-blue-50 rounded-lg">
+                        <i class="bi bi-calendar-x mr-2"></i> Leave Management
+                    </button>
+                    <button onclick="showSection('reports')" class="w-full p-3 text-left hover:bg-blue-50 rounded-lg">
+                        <i class="bi bi-file-earmark-text mr-2"></i> Reports
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="ml-64 p-8">
+            <!-- Dashboard Section -->
+            <div id="dashboardSection" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500">Present</p>
+                                <h3 class="text-2xl font-bold">18</h3>
+                            </div>
+                            <div class="text-green-500 text-2xl">
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500">Absent</p>
+                                <h3 class="text-2xl font-bold">2</h3>
+                            </div>
+                            <div class="text-red-500 text-2xl">
+                                <i class="bi bi-x-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500">Late</p>
+                                <h3 class="text-2xl font-bold">1</h3>
+                            </div>
+                            <div class="text-yellow-500 text-2xl">
+                                <i class="bi bi-exclamation-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <canvas id="attendanceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Attendance Section -->
+            <div id="attendanceSection" class="hidden space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <h3 class="text-lg font-semibold mb-4">QR Code Scanner</h3>
+                        <div class="qr-scanner bg-gray-100 mx-auto">
+                            <div class="scanner-line"></div>
+                        </div>
+                        <button onclick="scanQR()" class="mt-4 w-full bg-blue-600 text-white p-3 rounded-lg">
+                            Scan QR Code
+                        </button>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <h3 class="text-lg font-semibold mb-4">GPS Check-in</h3>
+                        <div id="map" class="h-48 bg-gray-100 rounded-lg mb-4"></div>
+                        <button onclick="gpsCheckIn()" class="w-full bg-blue-600 text-white p-3 rounded-lg">
+                            Check-in via GPS
+                        </button>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <h3 class="text-lg font-semibold mb-4">Manual Check-in</h3>
+                        <div class="space-y-4">
+                            <input type="time" class="w-full p-3 border rounded-lg">
+                            <textarea placeholder="Notes" class="w-full p-3 border rounded-lg"></textarea>
+                            <button onclick="manualCheckIn()" class="w-full bg-blue-600 text-white p-3 rounded-lg">
+                                Submit Manual Check-in
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leave Management Section -->
+            <div id="leavesSection" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <h3 class="text-lg font-semibold mb-4">Apply for Leave</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="date" class="p-3 border rounded-lg" placeholder="Start Date">
+                            <input type="date" class="p-3 border rounded-lg" placeholder="End Date">
+                        </div>
+                        <select class="w-full p-3 border rounded-lg">
+                            <option>Sick Leave</option>
+                            <option>Vacation</option>
+                            <option>Personal Leave</option>
+                        </select>
+                        <textarea placeholder="Reason" class="w-full p-3 border rounded-lg"></textarea>
+                        <button onclick="applyLeave()" class="bg-blue-600 text-white p-3 rounded-lg">
+                            Submit Leave Application
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <h3 class="text-lg font-semibold mb-4">Leave History</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="p-3 text-left">Date</th>
+                                    <th class="p-3 text-left">Type</th>
+                                    <th class="p-3 text-left">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-t">
+                                    <td class="p-3">2023-12-01</td>
+                                    <td class="p-3">Sick Leave</td>
+                                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded">Approved</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Section -->
+            <div id="reportsSection" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold">Monthly Attendance Report</h3>
+                        <div class="space-x-2">
+                            <button onclick="exportPDF()" class="bg-red-600 text-white px-4 py-2 rounded-lg">
+                                <i class="bi bi-file-pdf mr-2"></i> Export PDF
+                            </button>
+                            <button onclick="exportExcel()" class="bg-green-600 text-white px-4 py-2 rounded-lg">
+                                <i class="bi bi-file-excel mr-2"></i> Export Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="p-3 text-left">Date</th>
+                                    <th class="p-3 text-left">Check-in</th>
+                                    <th class="p-3 text-left">Check-out</th>
+                                    <th class="p-3 text-left">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-t">
+                                    <td class="p-3">2023-12-01</td>
+                                    <td class="p-3">09:00 AM</td>
+                                    <td class="p-3">05:00 PM</td>
+                                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded">Present</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize attendance chart
+        const ctx = document.getElementById('attendanceChart');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                datasets: [{
+                    label: 'Attendance Rate',
+                    data: [95, 92, 88, 95, 90],
+                    borderColor: '#3B82F6',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+
+        // Initialize user data in localStorage if not exists
+        if (!localStorage.getItem('userId')) {
+            localStorage.setItem('userId', 'user_' + Math.random().toString(36).substr(2, 9));
+        }
+
+        // Login function
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer eCYAh99jNvVxQz5SU2zVoXjJUQD3',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        appSlug: 'attendance-app-123',
+                        action: 'read',
+                        collection: 'users',
+                        conditions: { email, password }
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success && data.result.length > 0) {
+                    document.getElementById('loginComponent').classList.add('hidden');
+                    document.getElementById('dashboardComponent').classList.remove('hidden');
+                } else {
+                    alert('Invalid credentials');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Login failed');
+            }
+        }
+
+        // Google Sign-In
+        function googleSignIn() {
+            alert('Google Sign-In integration would be implemented here');
+        }
+
+        // Navigation
+        function showSection(section) {
+            ['dashboard', 'attendance', 'leaves', 'reports'].forEach(s => {
+                document.getElementById(`${s}Section`).classList.add('hidden');
+            });
+            document.getElementById(`${section}Section`).classList.remove('hidden');
+        }
+
+        // Attendance Functions
+        function scanQR() {
+            alert('QR scanning would be implemented here');
+        }
+
+        async function gpsCheckIn() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    try {
+                        const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer eCYAh99jNvVxQz5SU2zVoXjJUQD3',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                appSlug: 'attendance-app-123',
+                                action: 'create',
+                                collection: 'attendance',
+                                data: {
+                                    userId: localStorage.getItem('userId'),
+                                    timestamp: new Date(),
+                                    lat: position.coords.latitude,
+                                    lng: position.coords.longitude,
+                                    type: 'gps'
+                                }
+                            })
+                        });
+
+                        const data = await response.json();
+                        if (data.success) {
+                            alert('Check-in successful!');
+                        }
+                    } catch (error) {
+                        console.error('GPS check-in error:', error);
+                        alert('Check-in failed');
+                    }
+                });
+            } else {
+                alert('Geolocation is not supported by this browser');
+            }
+        }
+
+        async function manualCheckIn() {
+            // Similar implementation as GPS check-in but with manual time
+            alert('Manual check-in would be implemented here');
+        }
+
+        // Leave Management
+        async function applyLeave() {
+            // Implementation for leave application
+            alert('Leave application would be submitted here');
+        }
+
+        // Export Functions
+        function exportPDF() {
+            alert('PDF export would be implemented here');
+        }
+
+        function exportExcel() {
+            alert('Excel export would be implemented here');
+        }
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
